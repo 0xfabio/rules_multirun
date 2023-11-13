@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import subprocess
@@ -46,7 +47,9 @@ def _perform_serially(commands: List[Command], print_command: bool) -> bool:
     return True
 
 
-def _main(path: str) -> None:
+def _main(path: str, parse_additional_args=False,
+          additional_args: List[str] = []
+          ) -> None:
     with open(path) as f:
         instructions = json.load(f)
 
@@ -54,6 +57,11 @@ def _main(path: str) -> None:
         Command(blob["path"], blob["tag"], blob["args"], blob["env"])
         for blob in instructions["commands"]
     ]
+
+    if parse_additional_args:
+        for command in commands:
+            command.args.extend(additional_args)
+
     parallel = instructions["jobs"] == 0
     if parallel:
         success = _perform_concurrently(commands)
@@ -63,5 +71,19 @@ def _main(path: str) -> None:
     sys.exit(0 if success else 1)
 
 
+def _parse_args() -> tuple[argparse.Namespace, List[str]]:
+    parser = argparse.ArgumentParser(prog="multirun",
+                                     description="Run multiple commands")
+    parser.add_argument("-f", "--file",
+                        help="Path to the instructions file")
+    parser.add_argument("--parse-additional-args",
+                        action="store_true",
+                        help="Path to the instructions file")
+
+    return parser.parse_known_args()
+
+
 if __name__ == "__main__":
-    _main(sys.argv[-1])
+    args, unknown = _parse_args()
+
+    _main(args.file, args.parse_additional_args, unknown)

@@ -98,7 +98,9 @@ def _multirun_impl(ctx):
         content = instructions.to_json(),
     )
 
-    script = 'exec ./%s -f %s "$@"\n' % (shell.quote(runner_exe.short_path), shell.quote(instructions_file.short_path))
+    additional_args_flag = "--parse-additional-args" if ctx.attr.parse_additional_args else ""
+
+    script = 'exec ./%s -f %s %s "$@"\n' % (shell.quote(runner_exe.short_path), shell.quote(instructions_file.short_path), shell.quote(additional_args_flag))
     out_file = ctx.actions.declare_file(ctx.label.name + ".bash")
     ctx.actions.write(
         output = out_file,
@@ -133,6 +135,10 @@ def multirun_with_transition(cfg, allowlist = None):
         "print_command": attr.bool(
             default = True,
             doc = "Print what command is being run before running it. Only for sequential execution.",
+        ),
+        "parse_additional_args": attr.bool(
+            default = False,
+            doc = "Parse additional args from the command line.",
         ),
         "_bash_runfiles": attr.label(
             default = Label("@bazel_tools//tools/bash/runfiles"),
